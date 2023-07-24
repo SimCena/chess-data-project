@@ -1,13 +1,14 @@
-import { Injectable } from '@angular/core';
 import * as d3 from 'd3';
 import { Country } from '../app.component';
+import { DataService } from './data.service';
 
-@Injectable({
-  providedIn: 'root'
-})
 export class StatsService {
 
-  constructor() { }
+  dataService: DataService;
+
+  constructor(dataService: DataService) {
+    this.dataService = dataService;
+   }
 
   
 
@@ -78,5 +79,27 @@ export class StatsService {
     return winRates.sort((a, b)=> {
       return a.winRate - b.winRate
     }).splice(0,10);
+  }
+
+  getMonthlyElo() {
+    const monthlyGameElo: any[] = []
+    let firstMonthlyGame: any = {};
+
+    for(let i = 0; i < this.dataService.games.length; i++){
+      if(i==0 || this.isNewMonth(this.dataService.games[i]["EndDate"], this.dataService.games[i-1]["EndDate"])){
+        firstMonthlyGame = {};
+        firstMonthlyGame["Elo"] = this.dataService.games[i]["Elo"];
+        firstMonthlyGame["Date"] = this.dataService.games[i]["EndDate"];
+        console.log(firstMonthlyGame)
+        monthlyGameElo.push(firstMonthlyGame);
+      }
+    }
+
+    console.log(monthlyGameElo)
+    return monthlyGameElo;
+  }
+
+  isNewMonth(currentDate: Date, targetDate: Date){
+    return Math.abs(targetDate.getMonth() - currentDate.getMonth()) > 0;
   }
 }

@@ -30,12 +30,14 @@ export class AppComponent implements OnInit {
   drawMap: any;
   lostMap: any;
 
+  BAR_WIDTH = 35;
   counter = 0;
   dataArrays: Country[][] = [];
   map: any;
   currentGames: any;
-  constructor(private dataHandler: ChessComDataHandlerService, private stats: StatsService, private dataService: DataService) {
-
+  stats : StatsService;
+  constructor(private dataHandler: ChessComDataHandlerService, private dataService: DataService) {
+    this.stats = new StatsService(dataService);
   }
 
   ngOnInit(){
@@ -51,9 +53,13 @@ export class AppComponent implements OnInit {
     this.appendSVG(this.dataArrays[0], 'winsGraph', 'Wins Graph')
     this.appendSVG(this.dataArrays[1], 'losesGraph', 'Loses Graph')
     this.appendSVG(this.dataArrays[2], 'drawsGraph', 'Draws Graph')
-
-    this.divScript();
     this.calculateStats();
+
+    if(this.dataService.loaded){
+      // this.stats.
+      console.log("hello");
+      this.stats.getMonthlyElo();
+    }
   }
   
   selectGraph(value:any) {
@@ -83,62 +89,6 @@ export class AppComponent implements OnInit {
     }
   }
 
-  divScript() {
-    const container = document.getElementById("graph-container");
-    const svg = document.getElementById("barChart");
-    if( container === null || svg === null) return;
-    let isDragging = false;
-    let currentX;
-    let currentY;
-    let initialX: number;
-    let initialY: number;
-    let xOffset = 0;
-    let yOffset = 0;
-    let scale = 1;
-    let scaleMultiplier = 0.1;
-    let containerWidth = container.offsetWidth;
-    let maxScale = 2;
-    let minScale = 1;
-    container.addEventListener("mouseup", () => {
-      isDragging = false;
-    });
-    container.addEventListener("mousedown", (e) => {
-      initialX = e.clientX - xOffset;
-      initialY = e.clientY - yOffset;
-      isDragging = true;
-    });
-    container.addEventListener("mousemove", (e) => {
-      if (isDragging) {
-        currentX = e.clientX - initialX;
-        currentY = e.clientY - initialY;
-        xOffset = Math.min(scale === 1 ? 0 : containerWidth / scale, Math.max(currentX, -3015 * scale + containerWidth));
-        yOffset = Math.min(Math.max(-500 * (scale-1), currentY* scale ), 507 * scale - container.offsetHeight);
-        setTranslate(xOffset, yOffset, svg);
-      }
-    });
-    
-    container.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      let delta = -e.deltaY;
-      let mouseX = e.clientX - container.offsetLeft;
-      let mouseY = e.clientY - container.offsetTop;
-      let beforeScale = scale;
-      if (delta > 0 && scale < maxScale) {
-        scale += scaleMultiplier;
-      } else if (delta < 0 && scale > minScale) {
-        scale -= scaleMultiplier;
-      }
-      let deltaScale = scale - beforeScale;
-      xOffset -= (mouseX - containerWidth / 2) * deltaScale;
-      yOffset -= (mouseY - container.offsetHeight / 2) * deltaScale;
-      xOffset = Math.min(0, Math.max(xOffset, -3000 * scale + containerWidth));
-      yOffset = Math.min(Math.max(0, yOffset), 500 * scale - container.offsetHeight);
-      setTranslate(xOffset, yOffset, svg);
-    });
-    function setTranslate(xPos: number, yPos: number, el: HTMLElement) {
-      el.style.transform = `translate(${xPos}px, ${yPos}px) scale(${scale})`;
-    }
-  }
   
   calculateStats(){
     console.log("STATS: ")
@@ -192,8 +142,11 @@ export class AppComponent implements OnInit {
   }
 
   appendSVG(data: Country[], className: string, title: string) {
-    const w = 5000;
+    // const w = 5000;
     const h = 500;
+    let w = data.length * this.BAR_WIDTH;
+    console.log(w)
+    if(w < 2000) w = 2000;
     var svg = d3.select("#" + className)
           .append("svg")
           .attr('id', 'barChart')
@@ -223,7 +176,7 @@ export class AppComponent implements OnInit {
           .transition()
           .duration(1000)
           .attr("x", function(d, i) {
-            return (w / dataArray.length) * i;
+            return (w / dataArray.length + 1) * i;
           });
       svg.selectAll(".code")
           .sort(function(a: any, b: any) {
@@ -232,7 +185,7 @@ export class AppComponent implements OnInit {
           .transition()
           .duration(1000)
           .attr("x", function(d, i) {
-            return (w / dataArray.length) * i + 10;
+            return (w / dataArray.length + 1) * i + 15;
           });
       svg.selectAll(".count")
           .sort(function(a: any, b: any) {
@@ -241,7 +194,7 @@ export class AppComponent implements OnInit {
           .transition()
           .duration(1000)
           .attr("x", function(d, i) {
-            return (w / dataArray.length) * i + 10;
+            return (w / dataArray.length + 1) * i + 15;
           });
     }
     var showTooltip = (e: MouseEvent, data: Country) => {
@@ -271,10 +224,10 @@ export class AppComponent implements OnInit {
         .on("mouseout", function(){
           hideTooltip();
         })
-        .attr("x", (d, i) => { return i * (w / dataArray.length); })
+        .attr("x", (d, i) => { return i * ((w / dataArray.length ) + 1) ; })
         .attr("y", (d) => { 
           return h - yScale(d.count) })
-        .attr("width", w / dataArray.length - barPadding)
+        .attr("width", this.BAR_WIDTH + "px")
         .attr("height", function(d) { return yScale(d.count) })
         .style("fill", "rgb(39, 37, 34)")
         .style("opacity", 1.);
@@ -289,7 +242,7 @@ export class AppComponent implements OnInit {
         .append("text")
         .attr('class', 'count')
         .text(function(d) { return d.count; })
-        .attr("x", (d, i) => { return i * (w / dataArray.length) + 10; })
+        .attr("x", (d, i) => { return (w / dataArray.length + 1) * i + 15; })
         .attr("y", function(d) { return h - yScale(d.count) + 15; })
         .attr("text-anchor", "middle")
         .attr("fill", "white")
@@ -300,7 +253,7 @@ export class AppComponent implements OnInit {
         .append("text")
         .text(function(d) { return d.code; })
         .attr('class', 'code')
-        .attr("x", (d, i) => { return i * (w / dataArray.length) + 10; })
+        .attr("x", (d, i) => { return (w / dataArray.length + 1) * i + 15; })
         .attr("y", h-10)
         .attr("text-anchor", "middle")
         .attr("fill", "white")
