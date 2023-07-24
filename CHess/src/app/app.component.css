@@ -2,21 +2,123 @@ rect:hover {
     fill: orange;
 }
 
+.container {
+  position: relative;
+  width: 2000px;
+  height: 500px;
+}
+
+.box {
+  position: absolute;
+  width: 2000px;
+  height: 500px;
+  background-color: #e0e0e0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* overflow: hidden; */
+  font-weight: bold;
+  border: 2px solid #333;
+  border-radius: 8px;
+  opacity: 1.0;
+  user-select: none; /* Standard */
+  overflow-x: auto; /* Enable horizontal scrolling */
+  overflow-y: hidden; /* Disable vertical scrolling */
+  white-space: nowrap; /* Prevent the content from wrapping */
+}
+
+
+.barGraph {
+  padding: 10px;
+  padding-bottom: 30px;
+  position: absolute;
+  left: 0px;
+  background-color: lightgray;
+}
+
+#winsGraphContainer { z-index: 3; }
+#losesGraphContainer { z-index: 2; }
+#drawsGraphContainer { z-index: 1; }
+
 #graph-container {
     overflow: hidden;
     width: 2000px;
     height: 500px;
-    user-select: none; /* Standard */
     border: black;
     border-style: solid;
     border-radius: 1em;
 }
 
+.box::-webkit-scrollbar {
+  width: 10px; /* Set the width of the scrollbar */
+}
+
+.box::-webkit-scrollbar:horizontal {
+  top: -20px;
+}
+
+.box::-webkit-scrollbar-thumb {
+  background-color: #888; /* Color of the scrollbar thumb */
+  border-radius: 5px; /* Rounded corners for the thumb */
+}
+
+/* Position the scrollbar outside the div */
+.box::-webkit-scrollbar-corner,
+.box::-webkit-scrollbar-track {
+  display: none; /* Hide the default scrollbar track and corner */
+  background: transparent; /* Set the background to transparent */
+}
+
+/* Set the position of the custom scrollbar */
+.box::-webkit-scrollbar-thumb:vertical {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
 #graph-title {
-    display:block;
-    position : absolute;
-    top: 500;
-    z-index: 1;
+  position : relative; 
+  top: 0;
+  z-index: 5;
+  margin: 20px;
+  border: 2px solid #ccc;
+  font-size: 10;
+  font-weight: bold;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+  padding: 8px;
+  font-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Apply custom styles to the arrow icon in select (works in Chrome and Safari) */
+#graph-title::-webkit-inner-spin-button,
+#graph-title::-webkit-outer-spin-button {
+  appearance: none; 
+  margin: 0px;
+}
+
+/* Apply custom styles to the arrow icon in select (works in Firefox) */
+#graph-title::-moz-focus-inner {
+  border: 0;
+}
+
+/* Hover and focus styles */
+#graph-title:hover,
+#graph-title:focus {
+  border-color: #999;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  outline: none;
+}
+
+/* Disabled style */
+#graph-title:disabled {
+  opacity: 0.5;
 }
 
 .dot {
@@ -283,15 +385,32 @@ rect:hover {
     width: 16px;
     margin-right: 4px;
   }
+  #tooltip {
+    position: absolute;
+    width: 100px;
+    height: 40px;
+    text-align: center;
+    pointer-events: none;
+    background-color: #333;
+    color: #fff;
+    padding: 8px;
+    border: 3px solid #272522;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 15px;
+    z-index: 5;
+    visibility: hidden;
 
-  svg#clouds {
-    position: fixed;
-    bottom: -160px;
-    left: -230px;
-    z-index: -10;
-    width: 1920px;
-    fill:#24292e;
   }
+
+  /* #tooltip.hidden {
+    visibility: hidden;
+  } */
+
+  #tooltip.visible {
+    visibility: visible;
+  }
+
 
   /* Responsive Styles */
   @media screen and (max-width: 767px) {

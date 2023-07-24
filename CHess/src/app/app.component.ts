@@ -3,6 +3,7 @@ import { ChessComDataHandlerService } from './services/chess-com-data-handler.se
 import * as d3 from 'd3';
 import { saveAs } from "file-saver";
 import { StatsService } from './services/stats.service';
+import { DataService } from './services/data.service';
 
 interface Games {
   games?: any;
@@ -33,7 +34,7 @@ export class AppComponent implements OnInit {
   dataArrays: Country[][] = [];
   map: any;
   currentGames: any;
-  constructor(private dataHandler: ChessComDataHandlerService, private stats: StatsService) {
+  constructor(private dataHandler: ChessComDataHandlerService, private stats: StatsService, private dataService: DataService) {
 
   }
 
@@ -47,22 +48,36 @@ export class AppComponent implements OnInit {
     //this.loadData('drawData.csv', 'drawGraph', 'Draws Graph');
   }
   afterLoad() {
-    this.appendSVG(this.dataArrays[0], 'winGraph', 'Wins Graph')
+    this.appendSVG(this.dataArrays[0], 'winsGraph', 'Wins Graph')
+    this.appendSVG(this.dataArrays[1], 'losesGraph', 'Loses Graph')
+    this.appendSVG(this.dataArrays[2], 'drawsGraph', 'Draws Graph')
+
     this.divScript();
     this.calculateStats();
   }
   
-  test(value:any) {
+  selectGraph(value:any) {
+    const boxes = document.getElementsByClassName('box') as HTMLCollectionOf<HTMLElement>;
+    const boxesArray = Array.from(boxes);
+  
+    const maxZIndex = boxesArray.reduce((max, box) => Math.max(max, parseInt(box.style.zIndex) || 0), 0);
+  
+    for (const box of boxesArray) {
+      const zIndex = parseInt(box.style.zIndex) || 0;
+      box.style.zIndex = "1";
+    }
     switch(value) {
       case 'wins':
-        this.redrawSVG(this.dataArrays[0])
+        //this.redrawSVG(this.dataArrays[0])
+        document.getElementById("winsGraphContainer")!.style.zIndex = '3';
         break;
       case 'loses':
-        this.redrawSVG(this.dataArrays[1])
+        //this.redrawSVG(this.dataArrays[1])
+        document.getElementById("losesGraphContainer")!.style.zIndex = '3';
         break;
       case 'draws':
-        console.log(this.dataArrays[2])
-        this.redrawSVG(this.dataArrays[2])
+        //this.redrawSVG(this.dataArrays[2])
+        document.getElementById("drawsGraphContainer")!.style.zIndex = '3';
         break;
       
     }
@@ -175,39 +190,11 @@ export class AppComponent implements OnInit {
       }
     })
   }
-  redrawSVG(data: Country[]) {
-    const w = 3000;
-    const h = 500;
-    var svg = d3.selectAll('rect').data(data)
-    let max = 0;
-    data.forEach((c)=>{
-      if(c.count > max) max = c.count;
-    })
-    var yScale = d3.scaleLinear()
-          .domain([0, max])
-          .range([50, h-50]);
-    svg.attr("x", (d, i) => { return i * (w / data.length); })
-        .attr("y", (d) => { 
-          return h - yScale(d.count) })
-        .attr("width", w / data.length - 1)
-        .attr("height", function(d) { return yScale(d.count) });
-    
-   
-    d3.selectAll('.code').data(data).text(function(d) { return d.code})
-        .attr("x", (d, i) => { return i * (w / data.length) + 10; })
-        .attr("y", h-10)
-        .attr("text-anchor", "middle")
-    
-    d3.selectAll('.count').data(data).text(function(d) { return d.count; })
-        .attr("x", (d, i) => { return i * (w / data.length) + 10; })
-        .attr("y", function(d) { return h - yScale(d.count) + 15; })
-        
-  }
 
   appendSVG(data: Country[], className: string, title: string) {
-    const w = 3000;
+    const w = 5000;
     const h = 500;
-    var svg = d3.select("#graph-container")
+    var svg = d3.select("#" + className)
           .append("svg")
           .attr('id', 'barChart')
           .attr("class", className)
@@ -225,7 +212,6 @@ export class AppComponent implements OnInit {
     this.drawBars(data, svg, w, h, yScale);
     this.drawLabels(data, svg, w, h, yScale);
   }
-
 
   drawBars(dataArray: Country[], svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>, w: number, h: number, yScale: d3.ScaleLinear<any, any>){
     const barPadding = 1;
@@ -258,30 +244,43 @@ export class AppComponent implements OnInit {
             return (w / dataArray.length) * i + 10;
           });
     }
+    var showTooltip = (e: MouseEvent, data: Country) => {
+      const tooltip = document.getElementById("tooltip");
+      if(!tooltip) return;
+      tooltip.classList.add('visible')
+      tooltip.style.left = e.pageX + "px";
+      tooltip.style.top = e.pageY - 50 + "px";
+      tooltip.innerHTML = data.name;
+    }
+    var hideTooltip = () => {
+      const tooltip = document.getElementById("tooltip");
+      if(!tooltip) return;
+      tooltip.classList.toggle('visible')
+    }
     var bars = svg.selectAll("rect")
         .data(dataArray)
         .enter()
         .append("rect")
-        // .on("mouseenter", function() {
-        //   d3.select(this)
-        //   .attr("fill", "rgb(84, 161, 196)");
-        //   })
-        // .on("mouseleave", function(d) {
-        //   d3.select(this)
-        //     .transition()
-        //     .duration(1050)
-        //     .attr("fill", "rgb(0, 0, " + 0 + ")");
-        //   })
         .attr('class', 'bar')
         .on("click", function() {
           sortBars();
           })
+        .on("mousemove", function(e, d){
+          showTooltip(e, d);
+        })
+        .on("mouseout", function(){
+          hideTooltip();
+        })
         .attr("x", (d, i) => { return i * (w / dataArray.length); })
         .attr("y", (d) => { 
           return h - yScale(d.count) })
         .attr("width", w / dataArray.length - barPadding)
-        .attr("height", function(d) { return yScale(d.count) });
+        .attr("height", function(d) { return yScale(d.count) })
+        .style("fill", "rgb(39, 37, 34)")
+        .style("opacity", 1.);
   }
+
+  
 
   drawLabels(dataArray: Country[], svg: d3.Selection<any, any, HTMLElement, any>, w: number, h: number, yScale: d3.ScaleLinear<any, any>){
     svg.selectAll(".count")
@@ -293,7 +292,8 @@ export class AppComponent implements OnInit {
         .attr("x", (d, i) => { return i * (w / dataArray.length) + 10; })
         .attr("y", function(d) { return h - yScale(d.count) + 15; })
         .attr("text-anchor", "middle")
-        .attr("fill", "white");
+        .attr("fill", "white")
+        .attr('pointer-events', 'none');
     svg.selectAll(".code")
         .data(dataArray)
         .enter()
@@ -303,7 +303,8 @@ export class AppComponent implements OnInit {
         .attr("x", (d, i) => { return i * (w / dataArray.length) + 10; })
         .attr("y", h-10)
         .attr("text-anchor", "middle")
-        .attr("fill", "white");
+        .attr("fill", "white")
+        .attr('pointer-events', 'none');
   }
 
 
@@ -386,4 +387,32 @@ export class AppComponent implements OnInit {
     saveAs(blob, fileName);
   }
 
+  //Unused functions 
+  redrawSVG(data: Country[]) {
+    const w = 3000;
+    const h = 500;
+    var svg = d3.selectAll('rect').data(data)
+    let max = 0;
+    data.forEach((c)=>{
+      if(c.count > max) max = c.count;
+    })
+    var yScale = d3.scaleLinear()
+          .domain([0, max])
+          .range([50, h-50]);
+    svg.attr("x", (d, i) => { return i * (w / data.length); })
+        .attr("y", (d) => { 
+          return h - yScale(d.count) })
+        .attr("width", w / data.length - 1)
+        .attr("height", function(d) { return yScale(d.count) });
+    
+   
+    d3.selectAll('.code').data(data).text(function(d) { return d.code})
+        .attr("x", (d, i) => { return i * (w / data.length) + 10; })
+        .attr("y", h-10)
+        .attr("text-anchor", "middle")
+    
+    d3.selectAll('.count').data(data).text(function(d) { return d.count; })
+        .attr("x", (d, i) => { return i * (w / data.length) + 10; })
+        .attr("y", function(d) { return h - yScale(d.count) + 15; })
+  }
 }

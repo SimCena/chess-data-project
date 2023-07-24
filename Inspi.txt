@@ -1,0 +1,5 @@
+https://public.tableau.com/views/MyChessJourney-Visualized/MyChessJourney?:language=en&:display_count=y&publish=yes&:origin=viz_share_link&:showVizHome=no
+
+https://gist.github.com/DataSherlock/58e6285dbd11cbba9d29b32c5480521d
+
+https://github.com/DataSherlock/chess-analytics
