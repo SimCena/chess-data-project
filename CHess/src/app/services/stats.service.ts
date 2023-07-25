@@ -1,6 +1,8 @@
 import * as d3 from 'd3';
-import { Country } from '../app.component';
+import { Country, MonthlyElo } from '../app.component';
 import { DataService } from './data.service';
+import { saveAs } from "file-saver";
+
 
 export class StatsService {
 
@@ -82,24 +84,71 @@ export class StatsService {
   }
 
   getMonthlyElo() {
-    const monthlyGameElo: any[] = []
+    const monthlyGameElo: any = {}
+    const monthMap: any = {};
     let firstMonthlyGame: any = {};
+    let games_count = 0;
 
-    for(let i = 0; i < this.dataService.games.length; i++){
-      if(i==0 || this.isNewMonth(this.dataService.games[i]["EndDate"], this.dataService.games[i-1]["EndDate"])){
-        firstMonthlyGame = {};
-        firstMonthlyGame["Elo"] = this.dataService.games[i]["Elo"];
-        firstMonthlyGame["Date"] = this.dataService.games[i]["EndDate"];
-        console.log(firstMonthlyGame)
-        monthlyGameElo.push(firstMonthlyGame);
-      }
-    }
+    
+    // for(let i = 0; i < this.dataService.games.length; i++){
+    //   const formattedMonth = this.dataService.games[i]["EndDate"].getMonth()+1 + " " + (this.dataService.games[i]["EndDate"].getYear() + 1900);
+    //   const timeControl = this.dataService.games[i]["TimeControl"];
+    //     if(monthMap[timeControl] == undefined) monthMap[timeControl] = {}
+    //     if(monthMap[timeControl][formattedMonth] == undefined){
+    //         firstMonthlyGame = {};
+    //         firstMonthlyGame["elo"] = this.dataService.games[i]["Elo"];
+    //         firstMonthlyGame["date"] = formattedMonth;
+    //         firstMonthlyGame["count"] = 1;
+    //         monthMap[timeControl][formattedMonth] = firstMonthlyGame;
+    //     } else {
+    //       monthMap[timeControl][formattedMonth]["count"]++;
+    //     }
+    // }
+    // let i = 0;
+    // for (const timeControls in monthMap){
+    //   monthlyGameElo[timeControls] = [];
+    //   for(const month in monthMap[timeControls]){
+    //     monthlyGameElo[timeControls].push(monthMap[timeControls][month]);
+    //   }
+    //   monthlyGameElo[timeControls] = monthlyGameElo[timeControls].sort((a:any, b:any) => {
+    //     const [monthA, yearA] = a.date.split(" ");
+    //     const [monthB, yearB] = b.date.split(" ");
+        
+    //     if (yearA !== yearB) {
+    //       return parseInt(yearA) < parseInt(yearB); // Compare years as strings
+    //     } else {
+    //       return parseInt(monthA) < parseInt(monthB); // Compare months as strings within the same year
+    //     }
+    //   });
+    //   const [minMonth, minYear] = monthlyGameElo[timeControls][0].date.split(" ");
+    //   const [maxMonth, maxYear]  = monthlyGameElo[timeControls][monthlyGameElo[timeControls].length - 1].date.split(" ");
+    //   let [currMonth, currYear] = [minMonth, minYear]; 
+    //   let i = 0;
 
-    console.log(monthlyGameElo)
+    //   while( !(currMonth == maxMonth && currYear == maxYear)) {
+    //     let formatedDate = currMonth + " " + currYear;
+    //     if(!monthlyGameElo[timeControls].some((item: { date: string; }) => item.date == formatedDate )){
+    //       const lastElo = monthlyGameElo[timeControls][i-1].elo;
+    //       monthlyGameElo[timeControls].splice(i, 0, {elo: lastElo, date: formatedDate, count: 0})
+    //     }
+    //     currMonth++;
+    //     if(currMonth > 12) {
+    //       currMonth = 1;
+    //       currYear++;
+    //     }
+    //     i++;
+    //   }
+      
+    // }
+    //this.saveascsv(monthlyGameElo, "monthlyGameElo.json");
+    
     return monthlyGameElo;
+
   }
 
-  isNewMonth(currentDate: Date, targetDate: Date){
-    return Math.abs(targetDate.getMonth() - currentDate.getMonth()) > 0;
+  saveascsv(obj: any, filename: string){
+    console.log(obj);
+    const blob: any = new Blob([JSON.stringify(obj)], { type: "text/json;charset=utf-8" });
+    saveAs(blob, filename);
   }
 }

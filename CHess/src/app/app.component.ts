@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { ChessComDataHandlerService } from './services/chess-com-data-handler.service';
 import * as d3 from 'd3';
-import { saveAs } from "file-saver";
 import { StatsService } from './services/stats.service';
 import { DataService } from './services/data.service';
+import { ConstantsService } from './services/constants.service';
+
 
 interface Games {
   games?: any;
@@ -18,6 +19,13 @@ interface WinRate {
   code: string,
   winRate: number,
 }
+
+export interface MonthlyElo {
+  elo: number,
+  date: string,
+  count: number,
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -29,15 +37,17 @@ export class AppComponent implements OnInit {
   winMap: any;
   drawMap: any;
   lostMap: any;
-
+  public gameModeSelected: string;
+  gameModeSelectedId: number = 0;
   BAR_WIDTH = 35;
-  counter = 0;
+  loadCounter = 0;
   dataArrays: Country[][] = [];
-  map: any;
+  monthlyEloArrays: any;
   currentGames: any;
   stats : StatsService;
-  constructor(private dataHandler: ChessComDataHandlerService, private dataService: DataService) {
+  constructor(private dataHandler: ChessComDataHandlerService, private dataService: DataService, private constants: ConstantsService) {
     this.stats = new StatsService(dataService);
+    this.gameModeSelected = "blitz";
   }
 
   ngOnInit(){
@@ -45,31 +55,64 @@ export class AppComponent implements OnInit {
     this.loadData('winData.csv', false);
     this.loadData('lostData.csv', false);
     this.loadData('drawData.csv', false);
-
+    this.loadMonthlyEloData('monthlyGameElo.json')
+    document.addEventListener('keydown', (e) => this.handleArrowKeys(e));
     //this.loadData('lostData.csv', 'lostGraph', 'Loses Graph');
     //this.loadData('drawData.csv', 'drawGraph', 'Draws Graph');
   }
   afterLoad() {
-    this.appendSVG(this.dataArrays[0], 'winsGraph', 'Wins Graph')
-    this.appendSVG(this.dataArrays[1], 'losesGraph', 'Loses Graph')
-    this.appendSVG(this.dataArrays[2], 'drawsGraph', 'Draws Graph')
+    this.appendBarSVG(this.dataArrays[0], 'winsGraph', 'Wins Graph')
+    this.appendBarSVG(this.dataArrays[1], 'losesGraph', 'Loses Graph')
+    this.appendBarSVG(this.dataArrays[2], 'drawsGraph', 'Draws Graph')
     this.calculateStats();
 
-    if(this.dataService.loaded){
-      // this.stats.
-      console.log("hello");
-      this.stats.getMonthlyElo();
+    this.drawEloHistory(this.monthlyEloArrays[300], "blitz")
+    this.drawEloHistory(this.monthlyEloArrays[600], "rapid")
+    this.drawEloHistory(this.monthlyEloArrays[60], "bullet")
+
+    // if(this.dataService.loaded){
+    //   const monthlyGameElos = this.stats.getMonthlyElo();
+    //   this.drawEloHistory(monthlyGameElos[300], "blitz")
+    //   this.drawEloHistory(monthlyGameElos[600], "rapid")
+    //   this.drawEloHistory(monthlyGameElos[60], "bullet")
+    // }
+  }
+
+  handleArrowKeys(event: any) {
+    
+    if (event.key === 'ArrowLeft') {
+      this.selectHistMode(-1);
+    } else if (event.key === 'ArrowRight') {
+      this.selectHistMode(1);
     }
   }
-  
+  selectHistMode(inc: number) {
+    console.log(inc)
+    document.getElementById(this.gameModeSelected + "-hist")!.style.zIndex = '1';
+    this.gameModeSelectedId = ( this.gameModeSelectedId + inc ) % 3;
+    if(this.gameModeSelectedId < 0) this.gameModeSelectedId = 2
+    console.log(this.gameModeSelectedId)
+
+    switch (this.gameModeSelectedId){
+      case 1:
+        this.gameModeSelected = "rapid";
+        break;
+      case 2:
+        this.gameModeSelected = "bullet";
+        break;
+      case 0:
+        this.gameModeSelected = "blitz";
+        break;
+    }
+    document.getElementById(this.gameModeSelected + "-hist")!.style!.zIndex = '3';
+  }
+
   selectGraph(value:any) {
-    const boxes = document.getElementsByClassName('box') as HTMLCollectionOf<HTMLElement>;
+    const boxes = document.getElementsByClassName('game-box') as HTMLCollectionOf<HTMLElement>;
     const boxesArray = Array.from(boxes);
   
-    const maxZIndex = boxesArray.reduce((max, box) => Math.max(max, parseInt(box.style.zIndex) || 0), 0);
   
     for (const box of boxesArray) {
-      const zIndex = parseInt(box.style.zIndex) || 0;
       box.style.zIndex = "1";
     }
     switch(value) {
@@ -134,18 +177,27 @@ export class AppComponent implements OnInit {
         })
       })
       this.dataArrays.push(data);
-      this.counter++;
-      if(this.counter > 2){
+      this.loadCounter++;
+      if(this.loadCounter > 3){
         this.afterLoad()
       }
     })
   }
 
-  appendSVG(data: Country[], className: string, title: string) {
+  loadMonthlyEloData(fileName: string){
+    d3.json('../assets/' + fileName).then( (data)=> {
+      this.monthlyEloArrays = data;
+      this.loadCounter++;
+      if(this.loadCounter > 3){
+        this.afterLoad()
+      }
+    })
+  }
+
+  appendBarSVG(data: Country[], className: string, title: string) {
     // const w = 5000;
     const h = 500;
     let w = data.length * this.BAR_WIDTH;
-    console.log(w)
     if(w < 2000) w = 2000;
     var svg = d3.select("#" + className)
           .append("svg")
@@ -197,14 +249,15 @@ export class AppComponent implements OnInit {
             return (w / dataArray.length + 1) * i + 15;
           });
     }
-    var showTooltip = (e: MouseEvent, data: Country) => {
+    var showTooltipBarGraph = (e: MouseEvent, data: Country) => {
       const tooltip = document.getElementById("tooltip");
       if(!tooltip) return;
       tooltip.classList.add('visible')
       tooltip.style.left = e.pageX + "px";
-      tooltip.style.top = e.pageY - 50 + "px";
-      tooltip.innerHTML = data.name;
+      tooltip.style.top = e.pageY - 70 + "px";
+      tooltip.innerHTML = data.name +"<br>"+ "Games: "+ data.count;
     }
+
     var hideTooltip = () => {
       const tooltip = document.getElementById("tooltip");
       if(!tooltip) return;
@@ -219,7 +272,7 @@ export class AppComponent implements OnInit {
           sortBars();
           })
         .on("mousemove", function(e, d){
-          showTooltip(e, d);
+          showTooltipBarGraph(e, d);
         })
         .on("mouseout", function(){
           hideTooltip();
@@ -260,112 +313,117 @@ export class AppComponent implements OnInit {
         .attr('pointer-events', 'none');
   }
 
+  drawEloHistory(eloData: MonthlyElo[], name: string){
+    const margin = { top: 20, right: 40, bottom: 30, left: 40 };
+    const width = 2000 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
 
-  // Fonctions pour get le data
+    const svg = d3.select("#" + name + "-hist")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  sleep(delayTime: number) {
-    return new Promise(resolve => setTimeout(resolve, delayTime));
-  }
+    const xScale = d3.scaleBand()
+      .domain(eloData.map(d => d.date))
+      .range([0, width])
+      .padding(0.2);
 
-  getFlag(userUrl: string, result: string){
-    this.dataHandler.getDataFromUrl(userUrl).subscribe(
-      (response:any) =>{
-        this.dataHandler.getDataFromUrl(response.country).subscribe(
-          (response:any) => {
-            let tempName = response.code;
-            if(result === 'win') {
-              this.lostMap[tempName] = this.lostMap[tempName] === undefined ? {code: response.code, name: response.name, count: 1} :
-                { code: this.lostMap[tempName].code, name: this.lostMap[tempName].name, count: this.lostMap[tempName].count + 1};
-              return;
-            } else if (result === 'stalemate' || result === 'repetition') {
-              this.drawMap[tempName] = this.drawMap[tempName] === undefined ? {code: response.code, name: response.name, count: 1} :
-                { code: this.drawMap[tempName].code, name: this.drawMap[tempName].name, count: this.drawMap[tempName].count + 1};
-              return;
-            } else {
-              this.winMap[tempName] = this.winMap[tempName] === undefined ? {code: response.code, name: response.name, count: 1} :
-                { code: this.winMap[tempName].code, name: this.winMap[tempName].name, count: this.winMap[tempName].count + 1};
-              return;
-            }
-            
-          }
-        )
-      }
-    )
-  }
+    const minElo = Math.min(...eloData.map(obj => obj.elo));
+    const maxElo = Math.max(...eloData.map(obj => obj.elo));
 
-  retrieveData() {
-    this.winMap = new Object();
-    this.drawMap = new Object();
-    this.lostMap = new Object();
-    this.dataHandler.getGames()
-    .subscribe((response:any) => {
-      this.data = response.archives;
-      console.log(this.data);
-      console.log(this.data['length']);
-      this.displayMonthGames(0);
+    const yScale = d3.scaleLinear()
+      .domain([minElo, maxElo])
+      .range([height, 0]);
+  
+    const line = d3.line<MonthlyElo>()
+      .x(d => xScale(d.date)! + xScale.bandwidth() / 2)
+      .y(d => yScale(d.elo))
+      .curve(d3.curveLinear);
+
+    const axis = svg.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(d3.scaleBand()
+      .domain(eloData.map(d => d.date))
+      .range([0, width])
+      .padding(0.2)));
+
+    svg.append("g")
+      .call(d3.axisLeft(yScale));
+
+    svg.append("path")
+      .datum(eloData)
+      .attr("fill", "none")
+      .attr("stroke", "#5e5e5e")
+      .attr("stroke-width", 6)
+      .attr("d", line)
+      .on("mousemove", function(e, d){
+        var eachBand = xScale.step();
+        var index = Math.floor(((e.pageX - axis.node()!.getBoundingClientRect()!.x - margin.left)/ eachBand));
+        d3.select(this).attr("stroke-width", 8)
+        showTooltipHistLine(e, eloData[index], new ConstantsService);
+      })
+      .on("mouseout", function(){
+        d3.select(this).attr("stroke-width", 6)
+        hideTooltip();
+      });
+  
+
+
+    const dots = svg.selectAll(".dot")
+      .data(eloData)
+      .enter()
+      .append("circle")
+      .attr("class", "dot")
+      .attr("cx", d => xScale(d.date)! + xScale.bandwidth() / 2)
+      .attr("cy", d => yScale(d.elo))
+      .attr("r", 9) // Adjust the radius as needed
+      .style("fill", "#272522") // Adjust the fill color as needed
+      .style("cursor", "pointer")
+      .on("mousemove", function(e, d){
+        showTooltipHistBubble(e, d, new ConstantsService);
+        d3.select(this).attr("r", 12)
+
+      })
+      .on("mouseout", function(){
+        hideTooltip();
+        d3.select(this).attr("r", 9)
       });
   }
 
-  
-  async displayMonthGames(index: number){
-    this.dataHandler.getDataFromUrl(this.data[index])
-    .subscribe(async (response: Games) => {
-      this.currentGames = Object.values(response.games);
-      let current: any = new Object;
-      for(let i = 0; i< this.currentGames.length; i++){
-        current = this.currentGames[i];
-        let opponent = current.black.username === 'SimCena' ? current.white : current.black;
-        console.log(this.currentGames.length);
-        this.getFlag("https://api.chess.com/pub/player/" + opponent.username, opponent.result);
-        await this.sleep(200);
-      }
-      this.counter++;
-      if(this.counter < 36) {
-        console.log(this.counter);
-        this.displayMonthGames(++index);
-      } else {
-        this.saveAsCSV(this.winMap, 'winData.csv');
-        this.saveAsCSV(this.lostMap, 'lostData.csv');
-        this.saveAsCSV(this.drawMap, 'drawData.csv');
-        return;
-      }
-    });
-  }
 
-  saveAsCSV(map: any, fileName: string){
-    const dataArray: Country[] = Object.values(map);
-    console.log(dataArray);
-    const csvData = d3.csvFormat(dataArray);
-    const blob = new Blob([csvData], { type: "text/csv;charset=utf-8" });
-    saveAs(blob, fileName);
-  }
+}
 
-  //Unused functions 
-  redrawSVG(data: Country[]) {
-    const w = 3000;
-    const h = 500;
-    var svg = d3.selectAll('rect').data(data)
-    let max = 0;
-    data.forEach((c)=>{
-      if(c.count > max) max = c.count;
-    })
-    var yScale = d3.scaleLinear()
-          .domain([0, max])
-          .range([50, h-50]);
-    svg.attr("x", (d, i) => { return i * (w / data.length); })
-        .attr("y", (d) => { 
-          return h - yScale(d.count) })
-        .attr("width", w / data.length - 1)
-        .attr("height", function(d) { return yScale(d.count) });
-    
-   
-    d3.selectAll('.code').data(data).text(function(d) { return d.code})
-        .attr("x", (d, i) => { return i * (w / data.length) + 10; })
-        .attr("y", h-10)
-        .attr("text-anchor", "middle")
-    
-    d3.selectAll('.count').data(data).text(function(d) { return d.count; })
-        .attr("x", (d, i) => { return i * (w / data.length) + 10; })
-        .attr("y", function(d) { return h - yScale(d.count) + 15; })
-  }
+function showTooltipHistBubble (e: MouseEvent, data: MonthlyElo,  constant: ConstantsService)  {
+  const tooltip = document.getElementById("tooltip");
+  if(!tooltip) return;
+  tooltip.classList.add('visible')
+  tooltip.style.left = e.pageX + "px";
+  tooltip.style.top = e.pageY - 70 + "px";
+  tooltip.innerHTML = `Date: ${constant.getDateFormat(data.date)} <br>Elo: ${data.elo} `;
+}
+
+function showTooltipHistLine(e: MouseEvent, data: MonthlyElo, constant: ConstantsService) {
+  const tooltip = document.getElementById("tooltip");
+  if(!tooltip) return;
+  tooltip.classList.add('visible')
+  tooltip.style.left = e.pageX + "px";
+  tooltip.style.top = e.pageY - 70 + "px";
+  tooltip.innerHTML = `Date: ${constant.getDateFormat(data.date)} <br> Game played: ${data.count}`;
+}
+
+var showTooltipBarGraph = (e: MouseEvent, data: Country) => {
+  const tooltip = document.getElementById("tooltip");
+  if(!tooltip) return;
+  tooltip.classList.add('visible')
+  tooltip.style.left = e.pageX + "px";
+  tooltip.style.top = e.pageY - 70 + "px";
+  tooltip.innerHTML = data.name;
+}
+
+function hideTooltip()  {
+  const tooltip = document.getElementById("tooltip");
+  if(!tooltip) return;
+  tooltip.classList.toggle('visible')
 }

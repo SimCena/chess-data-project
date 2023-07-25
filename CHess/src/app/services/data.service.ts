@@ -8,9 +8,9 @@ export class DataService {
   games: any[] = []
   loaded = false;
   constructor(private http: HttpClient) {
-    this.getGamesData().then(()=> {
-      this.loaded = true;
-    });
+    // this.getGamesData().then(()=> {
+    //   this.loaded = true;
+    // });
 
   }
 
