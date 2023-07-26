@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { saveAs } from 'file-saver';
+import * as d3 from 'd3';
 
 @Injectable({
   providedIn: 'root'
@@ -11,10 +13,15 @@ export class DataService {
     // this.getGamesData().then(()=> {
     //   this.loaded = true;
     // });
-
+    // d3.json('../assets/games.json' ).then( (data: any)=> {
+    //   this.games = data;
+    // })
   }
 
-
+  saveGames(){
+    const blob: any = new Blob([JSON.stringify(this.games, null, 2)], { type: "text/json;charset=utf-8" });
+    saveAs(blob, "games.json");
+  }
   async getGamesData(){
     const filePathBase = '../../assets/PGN/';
     for(let i = 1; i < 44; i++) {

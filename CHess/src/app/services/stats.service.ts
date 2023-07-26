@@ -14,38 +14,37 @@ export class StatsService {
 
   
 
-  getTotalWinRate(wins: Country[], loses: Country[]){
+  getTotalWinRate(wins: Country[], losses: Country[], draws: Country[]){
     const winsCount = wins.reduce((currentVal, w) => w.count+ currentVal, 0)
-    const losesCount = loses.reduce((currentVal, l) => l.count+ currentVal, 0)
-    console.log(winsCount + losesCount)
-    console.log(winsCount / losesCount)
-    
+    const lossesCount = losses.reduce((currentVal, l) => l.count+ currentVal, 0)
+    const drawsCount = draws.reduce((currentVal, l) => l.count+ currentVal, 0)
+
+    return winsCount / (winsCount + lossesCount + drawsCount);
   }
 
-  waffleChart(wins: Country[], loses: Country[], draws: Country[]) {
+  waffleChart(wins: Country[], losses: Country[], draws: Country[]) {
     const data = [];
     data.push({"name" : "wins", "value" : d3.sum(wins, function (c) {
       return c.count;
     }) })
-    data.push({"name" : "Loses", "value" : d3.sum(loses, function (c) {
+    data.push({"name" : "losses", "value" : d3.sum(losses, function (c) {
       return c.count;
     }) })
     data.push({"name" : "draws", "value" : d3.sum(draws, function (c) {
       return c.count;
     }) })
     const myColors = d3.scaleOrdinal()
-      .domain(["Wins", "Loses", "Draws"])
+      .domain(["Wins", "losses", "Draws"])
       .range(["#EDAE49", "#D1495B", "#00798C"]);
     const ttColors = d3.scaleOrdinal()
-      .domain(["Wins", "Loses", "Draws"])
+      .domain(["Wins", "losses", "Draws"])
       .range(["#ba8839", "#91323f", "#00515e"]);
-    console.log(data)
   }
 
-  getTopTenWinRates(wins: Country[], loses: Country[], draws: Country[]) {
+  getTopTenWinRates(wins: Country[], losses: Country[], draws: Country[]) {
     const winRates: { name: string; code: string; winRate: number; gamesPlayed: number;}[] = []
     wins.forEach((w)=>{
-      const countryTemp = loses.find((l)=> {return l.code === w.code})
+      const countryTemp = losses.find((l)=> {return l.code === w.code})
       const lCount = (countryTemp === undefined ? 0 : countryTemp.count);
       if(w.count + lCount > 30)
         winRates.push({
@@ -61,9 +60,9 @@ export class StatsService {
     return winRates.splice(0,10)
   }
 
-  getWorseWinRates(wins: Country[], loses: Country[], draws: Country[]) {
+  getWorseWinRates(wins: Country[], losses: Country[], draws: Country[]) {
     const winRates: { name: string; code: string; winRate: number;  gamesPlayed: number;}[] = []
-    loses.forEach((l)=>{
+    losses.forEach((l)=>{
       const countryTemp = wins.find((w)=> {return l.code === w.code})
       const wCount = (countryTemp === undefined ? 0 : countryTemp.count);
       if(l.count + wCount > 30)
