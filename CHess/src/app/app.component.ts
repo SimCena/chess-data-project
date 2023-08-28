@@ -363,6 +363,18 @@ export class AppComponent implements OnInit {
     const width = 2000 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
+    function customSortObjects(a: MonthlyElo, b: MonthlyElo): number {
+      const [aMonth, aYear] = a.date.split(" ").map(Number);
+      const [bMonth, bYear] = b.date.split(" ").map(Number);
+    
+      if (aYear !== bYear) {
+        return aYear - bYear;
+      } else {
+        return aMonth - bMonth;
+      }
+    }
+    eloData = eloData.sort(customSortObjects)
+
     const svg = d3.select("#" + name + "-hist")
       .append("svg")
       .attr("width", width + margin.left + margin.right)
@@ -377,6 +389,7 @@ export class AppComponent implements OnInit {
 
     const minElo = Math.min(...eloData.map(obj => obj.elo));
     const maxElo = Math.max(...eloData.map(obj => obj.elo));
+
 
     const yScale = d3.scaleLinear()
       .domain([minElo, maxElo])
